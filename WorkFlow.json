@@ -1,0 +1,557 @@
+{
+  "name": "Instagram",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8b49449f-50bd-4ab7-ac56-eb53208c6818",
+              "leftValue": "={{ $json.isVoiceMessage }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "793ef24b-3589-472e-ab7c-2a58b594500a",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-576, 432]
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "file": "={{ $json.voice_url }}",
+        "additionalFields": {
+          "caption": "=👤 User: {{ $json.username }} 🆔 ID: {{ $json.user_id }} 🎤 Voice message"
+        }
+      },
+      "id": "34180b0b-fa5f-48ac-aa9f-dcfccb114e65",
+      "name": "Send an audio file",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [816, -416]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "= {{ $('Code in JavaScript').item.json.name }}\n {{ $('Code in JavaScript').item.json.username }}\n {{ $('Code in JavaScript').item.json.user_id }}\n\n {{ $('Code in JavaScript').item.json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_notification": false,
+          "disable_web_page_preview": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "2013d3a3-5015-45d7-8f01-59090309b970",
+      "name": "Send a text message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [960, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ... (کد دست‌نخورده باقی می‌ماند، فقط MY_PAGE_ID را جایگزین کنید)\nif (!items || items.length === 0) return [];\n\nconst msg = items[0].json.message;\n\nif (!msg || (msg.from && msg.from.is_bot)) return [];\n\nif (!msg.reply_to_message) return [];\n\nconst originalText = msg.reply_to_message.text || msg.reply_to_message.caption || '';\nconst idMatch =\n  originalText.match(/🆔\\s*ID[:\\s]*([0-9]+)/) ||\n  originalText.match(/([0-9]{6,})/);\nif (!idMatch) return [];\n\nconst customerId = idMatch[1];\n\nfunction mediaItem(attachmentType, fileId, customerId) {\n  return [{ json: {\n    hasFile: true,\n    attachment_type: attachmentType,\n    customer_id: customerId,\n    telegram_file_id: fileId\n  } }];\n}\n\nif (msg.photo && msg.photo.length > 0) {\n  return mediaItem('image', msg.photo[msg.photo.length - 1].file_id, customerId);\n}\n\nif (msg.voice || msg.audio) {\n  return mediaItem('audio', (msg.voice || msg.audio).file_id, customerId);\n}\n\nif (msg.video || msg.video_note) {\n  return mediaItem('video', (msg.video || msg.video_note).file_id, customerId);\n}\n\nif (!msg.text) return [];\nreturn [{ json: {\n  hasFile: false,\n  customer_id: customerId,\n  reply_text: msg.text\n} }];\n"
+      },
+      "id": "a82e1903-b121-47c0-bd49-e6b2f0a4c6bc",
+      "name": "Code in JavaScript1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1056, 992]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS conversations (\n    id SERIAL PRIMARY KEY,\n    user_id VARCHAR(255),\n    username VARCHAR(255),\n    message TEXT,\n    message_id VARCHAR(255),\n    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [48, 512],
+      "id": "6a7f3574-61a9-46bb-803b-4feecb7ea006",
+      "name": "Execute a SQL query2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversations (user_id, username, message, message_id)\nVALUES ('{{ $json.user_id }}', '{{ $json.username }}', '{{ $json.message }}', '{{ $json.message_id }}');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [464, 368],
+      "id": "803a53c9-7555-4216-aa2c-4b034ab6ab8a",
+      "name": "Execute a SQL query3"
+    },
+    {
+      "parameters": {
+        "operation": "convertAudio",
+        "convertOutputFormat": "wav"
+      },
+      "type": "n8n-nodes-ffmpeg-audio.ffmpeg",
+      "typeVersion": 1,
+      "position": [-32, 768],
+      "id": "0040d170-c33f-4cac-b6cc-e885549017e2",
+      "name": "Convert audio file"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.telegram_file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [-320, 832],
+      "id": "9852d8c5-8da8-4934-94f1-652f79b4f459",
+      "name": "Get a file"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendbox.chat/api/v1/service/actions/send_message",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"account_id\": \"YOUR_SENDBOX_ACCOUNT_ID\",\n  \"recipient_id\": \"{{ $json.customer_id }}\",\n  \"message\": \"{{ $json.reply_text }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [592, 1360],
+      "id": "3e75d4cb-24ff-474e-832b-450610025c25",
+      "name": "mssg to Insta "
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "file": "={{ $json.image_url }}",
+        "additionalFields": {
+          "caption": "={{ $json.username }}\n{{ $json.user_id }}\n{{ $json.caption }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [928, 16],
+      "id": "944bccb5-7307-42b1-96e2-2b8f7a0e8a5d",
+      "name": "Send a photo message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// REFACTORED — \"Code in JavaScript\" (Instagram webhook path)\n// NOTE: Replace MY_PAGE_ID with your own Instagram Page ID\n\nif (!items || items.length === 0) return [];\n\nconst body = items[0].json.body || items[0].json;\n\nfunction escapeHtml(str) {\n  return String(str)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;');\n}\n\nconst first = (...vals) => vals.find((v) => v) || '';\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.seen = staticData.seen || [];\nconst eventKey = body.event_id || body.data?.message?.mid || null;\n\nif (eventKey) {\n  if (staticData.seen.includes(eventKey)) {\n    return [];\n  }\n  staticData.seen.push(eventKey);\n  if (staticData.seen.length > 300) staticData.seen.shift();\n}\n\nconst isInstagram = !!body.event_type;\nconst MY_PAGE_ID = 'YOUR_INSTAGRAM_PAGE_ID';\n\nconst profilePic      = first(body.profile_pic, body.data?.profile_pic, body.data?.result?.profile_pic);\nconst profileUsername = first(body.username,    body.data?.username,    body.data?.result?.username);\nconst profileName     = first(body.name,        body.data?.name,        body.data?.result?.name);\nconst profileUserId   = first(body.sender_id,   body.data?.sender?.id,  body.data?.result?.id);\n\nconst isProfileEvent =\n  (isInstagram && String(body.event_type || '').toLowerCase().includes('profile')) ||\n  (!body.data?.message && !!profilePic && !!profileUsername);\n\nif (isProfileEvent) {\n  return [{\n    json: {\n      isVoiceMessage: false,\n      isImageMessage: false,\n      isProfileUpdate: true,\n      user_id: String(profileUserId || 'unknown'),\n      username: String(profileUsername || ''),\n      name: String(profileName || ''),\n      profile_pic: String(profilePic),\n      received_at: new Date().toISOString(),\n      raw: body\n    }\n  }];\n}\n\nif (isInstagram && !body.data?.message) {\n  return [];\n}\n\nif (isInstagram && String(body.data?.sender?.id || '') === MY_PAGE_ID) {\n  return [];\n}\n\nconst attachments = body.data?.message?.attachments;\nif (isInstagram && Array.isArray(attachments) && attachments.length > 0) {\n  const att = attachments[0];\n  const senderId = String(body.data?.sender?.id || 'unknown');\n  const base = {\n    isProfileUpdate: false,\n    user_id: senderId,\n    username: 'instagram_user_' + senderId,\n    message_id: String(body.data?.message?.mid || ('msg_' + Date.now())),\n    received_at: new Date().toISOString()\n  };\n\n  if (att.type === 'audio' || att.type === 'voice') {\n    return [{\n      json: {\n        ...base,\n        isVoiceMessage: true,\n        isImageMessage: false,\n        voice_url: att.payload?.url || att.url || ''\n      }\n    }];\n  }\n\n  if (att.type === 'image') {\n    return [{\n      json: {\n        ...base,\n        isVoiceMessage: false,\n        isImageMessage: true,\n        image_url: att.payload?.url || att.url || '',\n        caption: escapeHtml(String(body.data?.message?.text || ''))\n      }\n    }];\n  }\n}\n\nconst messageId = body.data?.message?.mid || body.event_id || ('msg_' + Date.now());\nconst senderId  = body.data?.sender?.id || 'unknown';\nconst text      = body.data?.message?.text || '';\n\nif (!text) {\n  return [];\n}\n\nreturn [{\n  json: {\n    isVoiceMessage: false,\n    isImageMessage: false,\n    isProfileUpdate: false,\n    user_id: String(senderId),\n    username: 'instagram_user_' + senderId,\n    message: escapeHtml(String(text)),\n    message_id: String(messageId),\n    received_at: new Date().toISOString(),\n    raw: body\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-832, 416],
+      "id": "92f38bf0-6fb1-4b70-b800-87a81c641e12",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8b49449f-50bd-4ab7-ac56-eb53208c6818",
+              "leftValue": "={{ $json.isImageMessage }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "d3b7ea11-847f-498e-ab9c-e1d7856c2bdc",
+      "name": "If2",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-240, 480]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "660d7e69-c31b-4835-8116-c01b76bbca23",
+              "leftValue": "={{ $json.attachment_type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-208, 1120],
+      "id": "d838ccbb-3653-4bee-b805-bd26cc91109f",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendbox.chat/api/v1/service/actions/send_image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  recipient_id: $('Code in JavaScript1').item.json.customer_id,\n  images: [{ url: $json.data.path }],\n  account_id: \"YOUR_SENDBOX_ACCOUNT_ID\"\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [960, 928],
+      "id": "32b4c687-d4cc-4fdc-816b-7a42313af959",
+      "name": "Img to Insta "
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.telegram_file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [256, 992],
+      "id": "9a94fd9d-2db5-48f1-a24a-9c6b5b76ecda",
+      "name": "Get a file1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendbox.chat/api/v1/service/uploads",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "username",
+              "value": "YOUR_SENDBOX_USERNAME"
+            },
+            {
+              "name": "type",
+              "value": "image"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [576, 944],
+      "id": "af555d02-d42a-4984-b165-cf68a2a2b000",
+      "name": "Upload"
+    },
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [-1456, 976],
+      "id": "e2314436-1ff7-493e-94a9-1a681a2f3880",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendbox.chat/api/v1/service/actions/show_profile",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  account_id: \"YOUR_SENDBOX_ACCOUNT_ID\",\n  sender_id: $('Code in JavaScript').item.json.user_id\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [48, -320],
+      "id": "68c6dbc8-c03c-4a19-b7d9-e799084dab7a",
+      "name": "Catching profile's data "
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_WEBHOOK_PATH",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1392, 352],
+      "id": "b1a85d91-0b29-4361-a16d-c5a759755afe",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendbox.chat/api/v1/service/uploads",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "username",
+              "value": "YOUR_SENDBOX_USERNAME"
+            },
+            {
+              "name": "type",
+              "value": "audio"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [336, 768],
+      "id": "2d9dccab-825d-4596-98ee-3079369fa20a",
+      "name": "Upload file "
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendbox.chat/api/v1/service/actions/send_attachment",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "account_id",
+              "value": "YOUR_SENDBOX_ACCOUNT_ID"
+            },
+            {
+              "name": "recipient_id",
+              "value": "={{ $('Code in JavaScript1').item.json.customer_id }}"
+            },
+            {
+              "name": "attachment_type",
+              "value": "audio"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.data.path }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [752, 656],
+      "id": "3ed61cbd-99b2-4d25-bec7-359ae1cab766",
+      "name": "Voice to Insta ."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "660d7e69-c31b-4835-8116-c01b76bbca23",
+              "leftValue": "={{ $json.hasFile }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "8f375370-7862-45ab-93ba-dfdec87ed7cc",
+              "leftValue": "={{ $json.attachment_type }}",
+              "rightValue": "audio",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-640, 1040],
+      "id": "a417633f-ee32-4eaa-b760-564f95711fe3",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b317c694-70d6-4e5e-96be-821761edb4e8",
+              "leftValue": "={{ $json.isProfileUpdate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [-544, 16],
+      "id": "ee2a6816-b8f8-47f0-973a-ee2fcd4d8835",
+      "name": "Break the loop"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [{ "node": "Send an audio file", "type": "main", "index": 0 }],
+        [{ "node": "If2", "type": "main", "index": 0 }]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [[{ "node": "If1", "type": "main", "index": 0 }]]
+    },
+    "Execute a SQL query2": {
+      "main": [[{ "node": "Execute a SQL query3", "type": "main", "index": 0 }]]
+    },
+    "Execute a SQL query3": {
+      "main": [[{ "node": "Send a text message", "type": "main", "index": 0 }]]
+    },
+    "Get a file": {
+      "main": [[{ "node": "Convert audio file", "type": "main", "index": 0 }]]
+    },
+    "Convert audio file": {
+      "main": [[{ "node": "Upload file ", "type": "main", "index": 0 }]]
+    },
+    "mssg to Insta ": { "main": [[]] },
+    "Code in JavaScript": {
+      "main": [
+        [
+          { "node": "If", "type": "main", "index": 0 },
+          { "node": "Break the loop", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [{ "node": "Send a photo message", "type": "main", "index": 0 }],
+        [{ "node": "Execute a SQL query2", "type": "main", "index": 0 }]
+      ]
+    },
+    "If3": {
+      "main": [
+        [{ "node": "Get a file1", "type": "main", "index": 0 }],
+        [{ "node": "mssg to Insta ", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get a file1": {
+      "main": [[{ "node": "Upload", "type": "main", "index": 0 }]]
+    },
+    "Img to Insta ": { "main": [[]] },
+    "Upload": {
+      "main": [[{ "node": "Img to Insta ", "type": "main", "index": 0 }]]
+    },
+    "Telegram Trigger": {
+      "main": [[{ "node": "Code in JavaScript1", "type": "main", "index": 0 }]]
+    },
+    "Send a photo message": { "main": [[]] },
+    "Send a text message": { "main": [[]] },
+    "Webhook": {
+      "main": [[{ "node": "Code in JavaScript", "type": "main", "index": 0 }]]
+    },
+    "Upload file ": {
+      "main": [[{ "node": "Voice to Insta .", "type": "main", "index": 0 }]]
+    },
+    "If1": {
+      "main": [
+        [{ "node": "Get a file", "type": "main", "index": 0 }],
+        [{ "node": "If3", "type": "main", "index": 0 }]
+      ]
+    },
+    "Break the loop": {
+      "main": [[{ "node": "Catching profile's data ", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}
