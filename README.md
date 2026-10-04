@@ -8,11 +8,11 @@ An automation workflow built with n8n to connect Instagram Direct messages with 
 
 The workflow allows sales teams to receive Instagram customer messages directly in Telegram and send their replies back to Instagram through an automated workflow.
 
-Features
-Instagram Direct → Telegram
-Telegram → Instagram replies
-Customer identification
-Support for text messages
+-Features
+-Instagram Direct → Telegram
+-Telegram → Instagram replies
+-Customer identification
+-Support for text messages
 Support for voice messages
 Automated message routing
 n8n-based workflow automation
